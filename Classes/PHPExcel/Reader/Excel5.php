@@ -153,7 +153,7 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
     const MS_BIFF_CRYPTO_NONE           = 0;
     const MS_BIFF_CRYPTO_XOR            = 1;
     const MS_BIFF_CRYPTO_RC4            = 2;
-    
+
     // Size of stream blocks when using RC4 encryption
     const REKEY_BLOCK                   = 0x400;
 
@@ -382,7 +382,7 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
      * @var int
      */
     private $encryption = 0;
-    
+
     /**
      * The position in the stream after which contents are encrypted
      *
@@ -1221,7 +1221,7 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
 
         return $this->phpExcel;
     }
-    
+
     /**
      * Read record data from stream, decrypting as required
      *
@@ -1234,12 +1234,12 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
     private function readRecordData($data, $pos, $len)
     {
         $data = substr($data, $pos, $len);
-        
+
         // File not encrypted, or record before encryption start point
         if ($this->encryption == self::MS_BIFF_CRYPTO_NONE || $pos < $this->encryptionStartPos) {
             return $data;
         }
-    
+
         $recordData = '';
         if ($this->encryption == self::MS_BIFF_CRYPTO_RC4) {
             $oldBlock = floor($this->rc4Pos / self::REKEY_BLOCK);
@@ -1748,16 +1748,16 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
         if ($length != 54) {
             throw new PHPExcel_Reader_Exception('Unexpected file pass record length');
         }
-        
+
         $recordData = $this->readRecordData($this->data, $this->pos + 4, $length);
-        
+
         // move stream pointer to next record
         $this->pos += 4 + $length;
 
         if (!$this->verifyPassword('VelvetSweatshop', substr($recordData, 6, 16), substr($recordData, 22, 16), substr($recordData, 38, 16), $this->md5Ctxt)) {
             throw new PHPExcel_Reader_Exception('Decryption password incorrect');
         }
-        
+
         $this->encryption = self::MS_BIFF_CRYPTO_RC4;
 
         // Decryption required from the record after next onwards
@@ -1779,7 +1779,7 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
         for ($i = 0; $i < 5; $i++) {
             $pwarray[$i] = $valContext[$i];
         }
-        
+
         $pwarray[5] = chr($block & 0xff);
         $pwarray[6] = chr(($block >> 8) & 0xff);
         $pwarray[7] = chr(($block >> 16) & 0xff);
@@ -1868,7 +1868,7 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
 
         $salt = $key->RC4($salt_data);
         $hashedsalt = $key->RC4($hashedsalt_data);
-        
+
         $salt .= "\x80" . str_repeat("\0", 47);
         $salt[56] = "\x80";
 
@@ -5142,22 +5142,22 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
                 // 1. BITMAPCOREHEADER
                 // offset: 0; size: 4; bcSize, Specifies the number of bytes required by the structure
                 $bcSize = self::getInt4d($iData, 0);
-    //            var_dump($bcSize);
+                //            var_dump($bcSize);
 
                 // offset: 4; size: 2; bcWidth, specifies the width of the bitmap, in pixels
                 $bcWidth = self::getInt2d($iData, 4);
-    //            var_dump($bcWidth);
+                //            var_dump($bcWidth);
 
                 // offset: 6; size: 2; bcHeight, specifies the height of the bitmap, in pixels.
                 $bcHeight = self::getInt2d($iData, 6);
-    //            var_dump($bcHeight);
+                //            var_dump($bcHeight);
                 $ih = imagecreatetruecolor($bcWidth, $bcHeight);
 
                 // offset: 8; size: 2; bcPlanes, specifies the number of planes for the target device. This value must be 1
 
                 // offset: 10; size: 2; bcBitCount specifies the number of bits-per-pixel. This value must be 1, 4, 8, or 24
                 $bcBitCount = self::getInt2d($iData, 10);
-    //            var_dump($bcBitCount);
+                //            var_dump($bcBitCount);
 
                 $rgbString = substr($iData, 12);
                 $rgbTriples = array();
@@ -5387,18 +5387,28 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
                 case 'tSub': // subtraction
                     $op2 = array_pop($formulaStrings);
                     $op1 = array_pop($formulaStrings);
-                    $formulaStrings[] = "$op1$space1$space0[$token['data']]$op2";
+
+                    $sp0 = $space0[$token['data']];
+
+                    $formulaStrings[] = "$op1$space1$sp0$op2";
                     unset($space0, $space1);
                     break;
                 case 'tUplus': // unary plus
                 case 'tUminus': // unary minus
                     $op = array_pop($formulaStrings);
-                    $formulaStrings[] = "$space1$space0[$token['data']]$op";
+
+                    $sp0 = $space0[$token['data']];
+
+
+                    $formulaStrings[] = "$space1$sp0$op";
                     unset($space0, $space1);
                     break;
                 case 'tPercent': // percent sign
                     $op = array_pop($formulaStrings);
-                    $formulaStrings[] = "$op$space1$space0[$token['data']]";
+
+                    $sp0 = $space0[$token['data']];
+
+                    $formulaStrings[] = "$op$space1$sp0";
                     unset($space0, $space1);
                     break;
                 case 'tAttrVolatile': // indicates volatile function
@@ -5445,7 +5455,9 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
                             $ops[] = array_pop($formulaStrings);
                         }
                         $ops = array_reverse($ops);
-                        $formulaStrings[] = "$space1$space0[$token['data']['function']](" . implode(',', $ops) . ")";
+                        $sp0 = $space0[$token['data']['function']];
+
+                        $formulaStrings[] = "$space1$sp0(" . implode(',', $ops) . ")";
                         unset($space0, $space1);
                     } else {
                         // add-in function
@@ -5474,7 +5486,10 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
                     // bite off chunk of additional data
                     $cellRangeAddressList = $this->readBIFF8CellRangeAddressList($additionalData);
                     $additionalData = substr($additionalData, $cellRangeAddressList['size']);
-                    $formulaStrings[] = "$space1$space0[$token['data']]";
+
+                    $sp0 = $space0[$token['data']];
+
+                    $formulaStrings[] = "$space1$sp0";
                     unset($space0, $space1);
                     break;
                 case 'tArea': // cell range address
@@ -5493,7 +5508,9 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
                 case 'tRefN':
                 case 'tAreaN':
                 case 'tStr': // string
-                    $formulaStrings[] = "$space1$space0[$token['data']]";
+                    $sp0 = $space0[$token['data']];
+
+                    $formulaStrings[] = "$space1$sp0";
                     unset($space0, $space1);
                     break;
             }
@@ -6960,10 +6977,10 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
         // not just return e.g. 'A1' and not 'A1:A1' ?
 
         // offset: 0; size: 2; index to first row (0... 65535) (or offset (-32768... 32767))
-            $fr = self::getInt2d($subData, 0) + 1;
+        $fr = self::getInt2d($subData, 0) + 1;
 
         // offset: 2; size: 2; index to last row (0... 65535) (or offset (-32768... 32767))
-            $lr = self::getInt2d($subData, 2) + 1;
+        $lr = self::getInt2d($subData, 2) + 1;
 
         // offset: 4; size: 2; index to first column or column offset + relative flags
 
